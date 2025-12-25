@@ -1,0 +1,151 @@
+-- Создание базы данных
+CREATE DATABASE IF NOT EXISTS autoservice;
+USE autoservice;
+
+-- Таблица пользователей
+CREATE TABLE users (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    role ENUM('admin', 'director', 'client') NOT NULL,
+    full_name VARCHAR(100),
+    phone VARCHAR(20),
+    email VARCHAR(100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Таблица клиентов (дополнительная информация)
+CREATE TABLE clients (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT,
+    address TEXT,
+    notes TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Таблица автомобилей
+CREATE TABLE cars (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    client_id INT,
+    brand VARCHAR(50) NOT NULL,
+    model VARCHAR(50) NOT NULL,
+    year INT,
+    vin VARCHAR(17) UNIQUE,
+    license_plate VARCHAR(15),
+    mileage INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
+);
+
+-- Таблица прайс-листа
+CREATE TABLE price_list (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    service_name VARCHAR(100) NOT NULL,
+    category VARCHAR(50),
+    description TEXT,
+    price DECIMAL(10,2) NOT NULL,
+    duration_hours DECIMAL(5,2),
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+-- Таблица механиков
+CREATE TABLE mechanics (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    full_name VARCHAR(100) NOT NULL,
+    specialization VARCHAR(100),
+    phone VARCHAR(20),
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+-- Таблица заказ-нарядов
+CREATE TABLE work_orders (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    order_number VARCHAR(40) UNIQUE NOT NULL,
+    car_id INT,
+    mechanic_id INT,
+    status ENUM('Ожидает', 'В работе', 'Выполнен', 'Отменен') DEFAULT 'Ожидает',
+    total_amount DECIMAL(10,2) DEFAULT 0,
+    estimated_completion DATE,
+    actual_completion DATE,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (car_id) REFERENCES cars(id),
+    FOREIGN KEY (mechanic_id) REFERENCES mechanics(id)
+);
+
+-- Таблица работ в заказ-наряде
+CREATE TABLE order_services (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    work_order_id INT,
+    service_id INT,
+    quantity INT DEFAULT 1,
+    price_per_unit DECIMAL(10,2),
+    total_price DECIMAL(10,2),
+    FOREIGN KEY (work_order_id) REFERENCES work_orders(id) ON DELETE CASCADE,
+    FOREIGN KEY (service_id) REFERENCES price_list(id)
+);
+
+-- Таблица запчастей
+CREATE TABLE spare_parts (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    work_order_id INT,
+    part_name VARCHAR(100) NOT NULL,
+    part_number VARCHAR(50),
+    quantity INT DEFAULT 1,
+    price_per_unit DECIMAL(10,2),
+    total_price DECIMAL(10,2),
+    FOREIGN KEY (work_order_id) REFERENCES work_orders(id) ON DELETE CASCADE
+);
+
+-- Вставка тестовых данных
+INSERT INTO users (username, password, role, full_name, phone, email) VALUES
+('admin', 'admin123', 'admin', 'Иванов Иван Иванович', '+79991112233', 'admin@autoservice.ru'),
+('director', 'director123', 'director', 'Петров Петр Петрович', '+79992223344', 'director@autoservice.ru'),
+('client1', 'client123', 'client', 'Сидоров Алексей', '+79993334455', 'client1@mail.ru');
+
+INSERT INTO clients (user_id, address, notes) VALUES
+(3, 'г. Москва, ул. Ленина, д. 10', 'Постоянный клиент');
+
+INSERT INTO cars (client_id, brand, model, year, vin, license_plate, mileage) VALUES
+(1, 'Toyota', 'Camry', 2020, 'JTDKB20U303000001', 'A123BC777', 45000);
+
+INSERT INTO price_list (service_name, category, description, price, duration_hours) VALUES
+('Замена масла', 'ТО', 'Замена моторного масла и фильтра', 3000, 1.5),
+('Диагностика двигателя', 'Диагностика', 'Комплексная диагностика двигателя', 5000, 2),
+('Шиномонтаж', 'Шиномонтаж', 'Замена и балансировка 4х колес', 4000, 2.5),
+('Замена тормозных колодок', 'Ремонт', 'Замена передних тормозных колодок', 8000, 3),
+('Кузовной ремонт', 'Кузовной ремонт', 'Локальный ремонт кузова', 15000, 8);
+
+INSERT INTO mechanics (full_name, specialization, phone) VALUES
+('Смирнов Александр', 'Двигатель, ТО', '+79994445566'),
+('Кузнецов Дмитрий', 'Ходовая часть, тормоза', '+79995556677'),
+('Васильев Михаил', 'Кузовной ремонт', '+79996667788');
+
+-- Процедура для расчета среднего чека
+DELIMITER //
+CREATE PROCEDURE CalculateAverageCheck(
+    IN start_date DATE,
+    IN end_date DATE,
+    OUT avg_check DECIMAL(10,2),
+    OUT total_revenue DECIMAL(10,2),
+    OUT order_count INT
+)
+BEGIN
+    SELECT
+        COUNT(*),
+        COALESCE(SUM(total_amount), 0)
+    INTO
+        order_count,
+        total_revenue
+    FROM work_orders
+    WHERE status = 'Выполнен'
+        AND actual_completion BETWEEN start_date AND end_date;
+
+    IF order_count > 0 THEN
+        SET avg_check = total_revenue / order_count;
+    ELSE
+        SET avg_check = 0;
+    END IF;
+END //
+DELIMITER ;
