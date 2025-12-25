@@ -1,0 +1,135 @@
+-- Создание базы данных
+CREATE DATABASE IF NOT EXISTS flower_shop;
+
+-- Таблица пользователей
+CREATE TABLE users (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password VARCHAR(100) NOT NULL,
+    full_name VARCHAR(100) NOT NULL,
+    role ENUM('admin', 'client', 'florist') NOT NULL,
+    phone VARCHAR(20),
+    email VARCHAR(100),
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Таблица клиентов
+CREATE TABLE clients (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT,
+    full_name VARCHAR(100) NOT NULL,
+    phone VARCHAR(20) NOT NULL,
+    email VARCHAR(100),
+    address TEXT,
+    registration_date DATE,
+    created_by_admin BOOLEAN DEFAULT FALSE,
+    notes TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- Таблица флористов
+CREATE TABLE florists (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    full_name VARCHAR(100) NOT NULL,
+    specialization VARCHAR(100),
+    phone VARCHAR(20),
+    email VARCHAR(100),
+    experience_years INT,
+    work_schedule VARCHAR(100),
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+-- Таблица букетов
+CREATE TABLE bouquets (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    price DECIMAL(10, 2) NOT NULL,
+    composition TEXT,
+    category VARCHAR(50),
+    seasonality VARCHAR(50),
+    is_available BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Таблица заявок
+CREATE TABLE orders (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    client_id INT NOT NULL,
+    bouquet_id INT NOT NULL,
+    florist_id INT,
+    order_date DATE NOT NULL,
+    delivery_date DATE NOT NULL,
+    delivery_time TIME,
+    delivery_address TEXT,
+    quantity INT DEFAULT 1,
+    total_price DECIMAL(10, 2) NOT NULL,
+    status ENUM('pending', 'processing', 'ready', 'delivered', 'cancelled') DEFAULT 'pending',
+    payment_method ENUM('cash', 'card', 'online'),
+    payment_status ENUM('paid', 'unpaid', 'partially_paid') DEFAULT 'unpaid',
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (client_id) REFERENCES clients(id),
+    FOREIGN KEY (bouquet_id) REFERENCES bouquets(id),
+    FOREIGN KEY (florist_id) REFERENCES florists(id) ON DELETE SET NULL
+);
+
+-- Таблица доставки
+CREATE TABLE deliveries (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    order_id INT NOT NULL,
+    courier_name VARCHAR(100),
+    courier_phone VARCHAR(20),
+    delivery_status ENUM('preparing', 'on_way', 'delivered', 'failed'),
+    estimated_delivery_time TIME,
+    actual_delivery_time TIME,
+    notes TEXT,
+    FOREIGN KEY (order_id) REFERENCES orders(id)
+);
+
+-- Вставка начальных данных
+-- Администратор
+INSERT INTO users (username, password, full_name, role, phone, email) 
+VALUES ('admin', 'admin123', 'Администратор Магазина', 'admin', '+79991234567', 'admin@flowershop.ru');
+
+-- Тестовые клиенты
+INSERT INTO users (username, password, full_name, role, phone, email) 
+VALUES 
+('client1', 'client123', 'Иванов Иван Иванович', 'client', '+79991234568', 'client1@mail.ru'),
+('client2', 'client123', 'Петрова Мария Сергеевна', 'client', '+79991234569', 'client2@mail.ru');
+
+INSERT INTO clients (user_id, full_name, phone, email, address, registration_date) 
+VALUES 
+(2, 'Иванов Иван Иванович', '+79991234568', 'client1@mail.ru', 'ул. Ленина, д. 10, кв. 5', CURDATE()),
+(3, 'Петрова Мария Сергеевна', '+79991234569', 'client2@mail.ru', 'ул. Пушкина, д. 25, кв. 12', CURDATE());
+
+-- Флористы
+INSERT INTO users (username, password, full_name, role, phone, email) 
+VALUES 
+('florist1', 'florist123', 'Смирнова Анна Владимировна', 'florist', '+79991234570', 'florist1@flowershop.ru'),
+('florist2', 'florist123', 'Кузнецов Дмитрий Петрович', 'florist', '+79991234571', 'florist2@flowershop.ru');
+
+INSERT INTO florists (full_name, specialization, phone, email, experience_years, work_schedule) 
+VALUES 
+('Смирнова Анна Владимировна', 'Свадебные букеты', '+79991234570', 'florist1@flowershop.ru', 5, 'Пн-Пт 9:00-18:00'),
+('Кузнецов Дмитрий Петрович', 'Праздничные композиции', '+79991234571', 'florist2@flowershop.ru', 3, 'Вт-Сб 10:00-19:00');
+
+-- Букеты
+INSERT INTO bouquets (name, description, price, composition, category, seasonality) 
+VALUES 
+('Классическая роза', 'Элегантный букет из красных роз', 2500.00, '25 красных роз, зелень, упаковка', 'Розы', 'Круглый год'),
+('Весеннее настроение', 'Светлый весенний букет', 1800.00, 'Тюльпаны, гиацинты, нарциссы, зелень', 'Сезонный', 'Весна'),
+('Свадебный букет', 'Нежный букет для невесты', 3500.00, 'Белые розы, пионы, эустома, гипсофила', 'Свадебный', 'Круглый год'),
+('Букет для мужчины', 'Строгий и элегантный', 2200.00, 'Герберы, ирисы, зелень', 'Повседневный', 'Круглый год'),
+('Экзотика', 'Экзотические цветы', 4500.00, 'Орхидеи, протеи, амариллисы', 'Экзотический', 'Круглый год'),
+('Детский букет', 'Яркий и веселый', 1500.00, 'Маргаритки, хризантемы, маленькие розы', 'Праздничный', 'Круглый год');
+
+-- Заявки
+INSERT INTO orders (client_id, bouquet_id, florist_id, order_date, delivery_date, delivery_time, 
+                   delivery_address, quantity, total_price, status, payment_method, payment_status) 
+VALUES 
+(1, 1, 1, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 2 DAY), '14:00:00', 
+ 'ул. Ленина, д. 10, кв. 5', 1, 2500.00, 'processing', 'card', 'paid'),
+(2, 3, 2, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 3 DAY), '16:00:00', 
+ 'ул. Пушкина, д. 25, кв. 12', 1, 3500.00, 'pending', 'cash', 'unpaid');
