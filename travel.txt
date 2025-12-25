@@ -1,0 +1,85 @@
+DROP DATABASE IF EXISTS travel_agency;
+
+-- Создаем базу данных
+CREATE DATABASE travel_agency;
+USE travel_agency;
+
+-- Таблица пользователей (админы и клиенты)
+CREATE TABLE users (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password VARCHAR(100) NOT NULL,
+    full_name VARCHAR(100) NOT NULL,
+    role ENUM('admin', 'client') NOT NULL,
+    phone VARCHAR(20),
+    email VARCHAR(100),
+    birth_date DATE,
+    registration_date DATE,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Создаем таблицу tours с правильной структурой
+CREATE TABLE tours (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    tour_name VARCHAR(200) NOT NULL,
+    description TEXT,
+    country VARCHAR(100) NOT NULL,
+    city VARCHAR(100),
+    tour_operator VARCHAR(200) NOT NULL,
+    tour_type ENUM('экскурсионный', 'пляжный', 'горнолыжный', 'лечебный', 'круиз') NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    duration_days INT NOT NULL,
+    price DECIMAL(10, 2) NOT NULL,
+    max_persons INT DEFAULT 20,
+    available_seats INT DEFAULT 20,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE bookings (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    tour_id INT NOT NULL,
+    booking_date DATE NOT NULL,
+    persons_count INT NOT NULL DEFAULT 1,
+    total_price DECIMAL(10, 2) NOT NULL,
+    status ENUM('pending', 'confirmed', 'cancelled', 'completed') DEFAULT 'pending',
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (tour_id) REFERENCES tours(id) ON DELETE CASCADE
+);
+
+-- Создаем таблицу reviews
+CREATE TABLE reviews (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    tour_id INT NOT NULL,
+    rating INT CHECK (rating >= 1 AND rating <= 5),
+    comment TEXT,
+    review_date DATE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (tour_id) REFERENCES tours(id) ON DELETE CASCADE
+);
+
+-- Вставляем тестовые данные
+
+-- Администраторы
+INSERT INTO users (username, password, full_name, role, phone, email) VALUES
+('admin', 'admin123', 'Администратор Системы', 'admin', '+79991234567', 'admin@travel.ru'),
+('manager', 'manager123', 'Менеджер Иванова', 'admin', '+79997654321', 'manager@travel.ru');
+
+-- Клиенты
+INSERT INTO users (username, password, full_name, role, phone, email, birth_date) VALUES
+('client1', 'client123', 'Петров Иван', 'client', '+79995554433', 'petrov@mail.ru', '1990-05-15'),
+('client2', 'client123', 'Сидорова Мария', 'client', '+79993332211', 'sidorova@mail.ru', '1985-08-20');
+
+-- Вставляем тестовые данные с туроператорами
+INSERT INTO tours (tour_name, description, country, city, tour_operator, tour_type, start_date, end_date, duration_days, price) VALUES
+('Отдых в Турции', 'Прекрасный отдых на берегу моря в Анталии', 'Турция', 'Анталия', 'Coral Travel', 'пляжный', '2024-06-01', '2024-06-14', 14, 85000.00),
+('Экскурсия по Италии', 'Тур по городам Италии: Рим, Флоренция, Венеция', 'Италия', 'Рим', 'Tez Tour', 'экскурсионный', '2024-07-10', '2024-07-20', 10, 120000.00),
+('Горные лыжи в Альпах', 'Горнолыжный курорт во Французских Альпах', 'Франция', 'Шамони', 'Pegas Touristik', 'горнолыжный', '2024-12-15', '2024-12-25', 10, 95000.00),
+('Круиз по Средиземному морю', '7-дневный круиз на лайнере', 'Италия', 'Генуя', 'TUI', 'круиз', '2024-08-05', '2024-08-12', 7, 150000.00),
+('Лечение в Карловых Варах', 'Лечебно-оздоровительный тур в Чехии', 'Чехия', 'Карловы Вары', 'Anex Tour', 'лечебный', '2024-09-01', '2024-09-14', 14, 110000.00);
