@@ -1,0 +1,45 @@
+-- Создаем базу данных
+CREATE DATABASE IF NOT EXISTS beauty_salon;
+USE beauty_salon;
+
+-- Таблица пользователей (и клиенты, и админы)
+CREATE TABLE IF NOT EXISTS users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password VARCHAR(50) NOT NULL,
+    role ENUM('client', 'admin') NOT NULL,
+    full_name VARCHAR(100) NOT NULL,
+    phone VARCHAR(20),
+    email VARCHAR(100)
+);
+
+-- Таблица мастеров
+CREATE TABLE IF NOT EXISTS masters (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    full_name VARCHAR(100) NOT NULL,
+    specialization VARCHAR(100),
+    phone VARCHAR(20)
+);
+
+-- Таблица записей
+CREATE TABLE IF NOT EXISTS appointments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    client_id INT NOT NULL,
+    master_id INT NOT NULL,
+    appointment_date DATE NOT NULL,
+    appointment_time TIME NOT NULL,
+    service_type VARCHAR(100),
+    status ENUM('scheduled', 'completed', 'cancelled') DEFAULT 'scheduled',
+    FOREIGN KEY (client_id) REFERENCES users(id),
+    FOREIGN KEY (master_id) REFERENCES masters(id)
+);
+
+-- Вставляем начальные данные
+INSERT INTO users (username, password, role, full_name, phone, email) VALUES
+('admin', 'admin123', 'admin', 'Администратор', '+123456789', 'admin@salon.com'),
+('client1', 'client123', 'client', 'Иванов Иван', '+7987654321', 'ivan@mail.com');
+
+INSERT INTO masters (full_name, specialization, phone) VALUES
+('Мария Петрова', 'Парикмахер', '+7911111111'),
+('Анна Сидорова', 'Визажист', '+7912222222'),
+('Ольга Иванова', 'Мастер маникюра', '+7913333333');
